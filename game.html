@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>遊戲模式</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 50px; }
+    #question { font-size: 32px; font-weight: bold; margin-bottom: 30px; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
+    .option-btn { padding: 15px; font-size: 18px; cursor: pointer; border: 1px solid #ccc; background-color: #f9f9f9; }
+    .correct { background-color: #4CAF50 !important; color: white; }
+    .wrong { background-color: #f44336 !important; color: white; }
+    #nextBtn { display: none; margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <h2>🎮 遊戲模式</h2>
+  <div id="gameContainer">
+    <div id="question">載入中...</div>
+    <div class="options" id="optionsContainer"></div>
+    <button id="nextBtn">下一題</button>
+  </div>
+  <br><a href="index.html">回首頁</a>
+
+  <script type="module">
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { db } from './firebase-config.js';
+
+    let words = [];
+    let currentQuestion = {};
+
+    async function loadData() {
+      const querySnapshot = await getDocs(collection(db, "banks"));
+      if(querySnapshot.empty) {
+        document.getElementById('question').innerText = "尚未建立題庫";
+        return;
+      }
+      // 這裡簡單取第一筆題庫做示範
+      words = querySnapshot.docs[0].data().words; 
+      nextQuestion();
+    }
+
+    function nextQuestion() {
+      document.getElementById('nextBtn').style.display = 'none';
+      if(words.length < 4) {
+        document.getElementById('question').innerText = "題庫單字量不足4個，無法產生選項！";
+        return;
+      }
+      
+      // 隨機決定要考英翻中(0)還是中翻英(1)
+      const isEngToChi = Math.random() < 0.5;
+      // 隨機挑選正確解答
+      const correctWord = words[Math.floor(Math.random() * words.length)];
+      currentQuestion = {
+        question: isEngToChi ? correctWord.eng : correctWord.chi,
+        answer: isEngToChi ? correctWord.chi : correctWord.eng
+      };
+
+      document.getElementById('question').innerText = currentQuestion.question;
+
+      // 產生選項 (1對 + 3錯)
+      let options = [currentQuestion.answer];
+      while(options.length < 4) {
+        let randomWord = words[Math.floor(Math.random() * words.length)];
+        let wrongOption = isEngToChi ? randomWord.chi : randomWord.eng;
+        if(!options.includes(wrongOption)) options.push(wrongOption);
+      }
+      
+      // 打亂選項順序
+      options.sort(() => Math.random() - 0.5);
+
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+      
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => checkAnswer(btn, opt);
+        container.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(btn, selected) {
+      const allBtns = document.querySelectorAll('.option-btn');
+      allBtns.forEach(b => b.disabled = true); // 鎖定作答
+
+      if (selected === currentQuestion.answer) {
+        btn.classList.add('correct');
+      } else {
+        btn.classList.add('wrong');
+        // 標示出正確答案 (立即回饋)
+        allBtns.forEach(b => {
+          if(b.innerText === currentQuestion.answer) b.classList.add('correct');
+        });
+      }
+      document.getElementById('nextBtn').style.display = 'inline-block';
+    }
+
+    document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+    
+    // 啟動
+    loadData();
+  </script>
+</body>
+</html>

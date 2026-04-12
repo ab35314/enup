@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>測驗模式</title>
+  <style>
+    body { font-family: sans-serif; text-align: center; padding: 50px; }
+    #question { font-size: 32px; font-weight: bold; margin-bottom: 30px; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
+    .option-btn { padding: 15px; font-size: 18px; cursor: pointer; border: 1px solid #ccc; background-color: #f9f9f9; }
+    .option-btn:hover { background-color: #ddd; }
+  </style>
+</head>
+<body>
+  <h2>🧠 測驗模式</h2>
+  <div id="quizContainer">
+    <p id="progress">載入中...</p>
+    <div id="question"></div>
+    <div class="options" id="optionsContainer"></div>
+  </div>
+  <div id="resultContainer" style="display:none;">
+    <h2>測驗結束！</h2>
+    <h1 id="score"></h1>
+  </div>
+  <br><a href="index.html">回首頁</a>
+
+  <script type="module">
+    import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.10.0/firebase-firestore.js";
+    import { db } from './firebase-config.js';
+
+    let words = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    const MAX_QUESTIONS = 5; // 設定測驗總題數
+
+    async function loadData() {
+      const querySnapshot = await getDocs(collection(db, "banks"));
+      if(querySnapshot.empty) return;
+      words = querySnapshot.docs[0].data().words;
+      renderQuestion();
+    }
+
+    function renderQuestion() {
+      if(currentQuestionIndex >= MAX_QUESTIONS) {
+        endQuiz();
+        return;
+      }
+
+      document.getElementById('progress').innerText = `第 ${currentQuestionIndex + 1} / ${MAX_QUESTIONS} 題`;
+      
+      const isEngToChi = Math.random() < 0.5;
+      const correctWord = words[Math.floor(Math.random() * words.length)];
+      const answer = isEngToChi ? correctWord.chi : correctWord.eng;
+
+      document.getElementById('question').innerText = isEngToChi ? correctWord.eng : correctWord.chi;
+
+      let options = [answer];
+      while(options.length < 4) {
+        let randomWord = words[Math.floor(Math.random() * words.length)];
+        let wrongOption = isEngToChi ? randomWord.chi : randomWord.eng;
+        if(!options.includes(wrongOption)) options.push(wrongOption);
+      }
+      options.sort(() => Math.random() - 0.5);
+
+      const container = document.getElementById('optionsContainer');
+      container.innerHTML = '';
+      options.forEach(opt => {
+        const btn = document.createElement('button');
+        btn.className = 'option-btn';
+        btn.innerText = opt;
+        btn.onclick = () => {
+          if(opt === answer) score++;
+          currentQuestionIndex++;
+          renderQuestion(); // 直接換下一題，沒有回饋
+        };
+        container.appendChild(btn);
+      });
+    }
+
+    function endQuiz() {
+      document.getElementById('quizContainer').style.display = 'none';
+      document.getElementById('resultContainer').style.display = 'block';
+      document.getElementById('score').innerText = `你的得分: ${score} / ${MAX_QUESTIONS}`;
+    }
+
+    loadData();
+  </script>
+</body>
+</html>
