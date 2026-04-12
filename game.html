@@ -2,55 +2,93 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>遊戲模式</title>
+  <title>遊戲模式 - 限時挑戰</title>
   <style>
-    body { font-family: sans-serif; text-align: center; padding: 50px; }
-    #question { font-size: 32px; font-weight: bold; margin-bottom: 30px; }
-    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 400px; margin: 0 auto; }
-    .option-btn { padding: 15px; font-size: 18px; cursor: pointer; border: 1px solid #ccc; background-color: #f9f9f9; }
-    .correct { background-color: #4CAF50 !important; color: white; }
-    .wrong { background-color: #f44336 !important; color: white; }
-    #nextBtn { display: none; margin-top: 20px; padding: 10px 20px; font-size: 16px; }
+    body { font-family: sans-serif; text-align: center; padding: 30px; }
+    .status-bar { display: flex; justify-content: space-between; max-width: 500px; margin: 0 auto 20px auto; font-size: 18px; font-weight: bold; background-color: #eee; padding: 15px; border-radius: 8px; }
+    #timer { color: #f44336; }
+    #question { font-size: 36px; font-weight: bold; margin-bottom: 30px; color: #333; }
+    .options { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; max-width: 500px; margin: 0 auto; }
+    .option-btn { padding: 20px; font-size: 18px; cursor: pointer; border: 2px solid #ddd; background-color: white; border-radius: 8px; transition: 0.2s; }
+    .option-btn:hover { background-color: #f0f0f0; }
+    .correct { background-color: #4CAF50 !important; color: white; border-color: #4CAF50; }
+    .wrong { background-color: #f44336 !important; color: white; border-color: #f44336; }
+    #nextBtn { display: none; margin-top: 30px; padding: 12px 30px; font-size: 18px; background-color: #2196F3; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    #nextBtn:hover { background-color: #0b7dda; }
+    #resultContainer { display: none; margin-top: 50px; }
+    #finalScore { font-size: 48px; color: #4CAF50; margin: 20px 0; }
   </style>
 </head>
 <body>
-  <h2>🎮 遊戲模式</h2>
+  <h2>🎮 遊戲模式 - 競速挑戰</h2>
+  
   <div id="gameContainer">
+    <div class="status-bar">
+      <div id="progress">第 1 / 20 題</div>
+      <div id="timer">⏱️ 30 秒</div>
+      <div id="scoreText">分數: 0</div>
+    </div>
+
     <div id="question">載入中...</div>
     <div class="options" id="optionsContainer"></div>
-    <button id="nextBtn">下一題</button>
+    <button id="nextBtn">下一題 ➡️</button>
   </div>
-  <br><a href="index.html">回首頁</a>
+
+  <div id="resultContainer">
+    <h2>🎉 挑戰結束！</h2>
+    <p>你的最終得分是：</p>
+    <div id="finalScore">0</div>
+    <button onclick="location.reload()" style="padding: 10px 20px; font-size: 16px; cursor: pointer;">再玩一次</button>
+  </div>
+  
+  <br><br><a href="index.html">回首頁</a>
 
   <script type="module">
     import { collection, getDocs } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
     import { db } from './firebase-config.js';
 
     let words = [];
+    let currentQuestionIndex = 0;
+    let score = 0;
+    const MAX_QUESTIONS = 20; // 總題數設定為 20 題
+    const TIME_LIMIT = 30;    // 每題 30 秒
+    
+    let timeLeft = TIME_LIMIT;
+    let timerInterval;
     let currentQuestion = {};
 
+    // 1. 從 Firebase 載入題庫
     async function loadData() {
       const querySnapshot = await getDocs(collection(db, "banks"));
       if(querySnapshot.empty) {
-        document.getElementById('question').innerText = "尚未建立題庫";
+        document.getElementById('question').innerText = "找不到題庫，請先去建立！";
         return;
       }
-      // 這裡簡單取第一筆題庫做示範
-      words = querySnapshot.docs[0].data().words; 
-      nextQuestion();
+      words = querySnapshot.docs[0].data().words;
+      
+      if(words.length < 4) {
+        document.getElementById('question').innerText = "題庫單字不足 4 個，無法進行遊戲！";
+        return;
+      }
+      renderQuestion();
     }
 
-    function nextQuestion() {
-      document.getElementById('nextBtn').style.display = 'none';
-      if(words.length < 4) {
-        document.getElementById('question').innerText = "題庫單字量不足4個，無法產生選項！";
+    // 2. 渲染題目
+    function renderQuestion() {
+      if(currentQuestionIndex >= MAX_QUESTIONS) {
+        endGame();
         return;
       }
-      
-      // 隨機決定要考英翻中(0)還是中翻英(1)
+
+      // 重置狀態與計時器
+      document.getElementById('nextBtn').style.display = 'none';
+      document.getElementById('progress').innerText = `第 ${currentQuestionIndex + 1} / ${MAX_QUESTIONS} 題`;
+      startTimer();
+
+      // 決定題目：隨機挑選英翻中(0)或中翻英(1)
       const isEngToChi = Math.random() < 0.5;
-      // 隨機挑選正確解答
       const correctWord = words[Math.floor(Math.random() * words.length)];
+      
       currentQuestion = {
         question: isEngToChi ? correctWord.eng : correctWord.chi,
         answer: isEngToChi ? correctWord.chi : correctWord.eng
@@ -58,16 +96,14 @@
 
       document.getElementById('question').innerText = currentQuestion.question;
 
-      // 產生選項 (1對 + 3錯)
+      // 產生 1 個正確選項 + 3 個錯誤選項
       let options = [currentQuestion.answer];
       while(options.length < 4) {
         let randomWord = words[Math.floor(Math.random() * words.length)];
         let wrongOption = isEngToChi ? randomWord.chi : randomWord.eng;
         if(!options.includes(wrongOption)) options.push(wrongOption);
       }
-      
-      // 打亂選項順序
-      options.sort(() => Math.random() - 0.5);
+      options.sort(() => Math.random() - 0.5); // 打亂選項
 
       const container = document.getElementById('optionsContainer');
       container.innerHTML = '';
@@ -81,15 +117,38 @@
       });
     }
 
+    // 3. 計時器邏輯
+    function startTimer() {
+      clearInterval(timerInterval);
+      timeLeft = TIME_LIMIT;
+      document.getElementById('timer').innerText = `⏱️ ${timeLeft} 秒`;
+      
+      timerInterval = setInterval(() => {
+        timeLeft--;
+        document.getElementById('timer').innerText = `⏱️ ${timeLeft} 秒`;
+        
+        if(timeLeft <= 0) {
+          clearInterval(timerInterval);
+          timeUp(); // 時間到
+        }
+      }, 1000);
+    }
+
+    // 4. 檢查答案與計分
     function checkAnswer(btn, selected) {
+      clearInterval(timerInterval); // 停止計時
       const allBtns = document.querySelectorAll('.option-btn');
       allBtns.forEach(b => b.disabled = true); // 鎖定作答
 
       if (selected === currentQuestion.answer) {
         btn.classList.add('correct');
+        // 計分：剩餘秒數 x 10 分
+        const pointsEarned = timeLeft * 10;
+        score += pointsEarned;
+        document.getElementById('scoreText').innerText = `分數: ${score}`;
       } else {
         btn.classList.add('wrong');
-        // 標示出正確答案 (立即回饋)
+        // 標示出正確答案
         allBtns.forEach(b => {
           if(b.innerText === currentQuestion.answer) b.classList.add('correct');
         });
@@ -97,9 +156,31 @@
       document.getElementById('nextBtn').style.display = 'inline-block';
     }
 
-    document.getElementById('nextBtn').addEventListener('click', nextQuestion);
+    // 5. 時間到的處理
+    function timeUp() {
+      const allBtns = document.querySelectorAll('.option-btn');
+      allBtns.forEach(b => b.disabled = true);
+      // 自動標示出正確答案
+      allBtns.forEach(b => {
+        if(b.innerText === currentQuestion.answer) b.classList.add('correct');
+      });
+      document.getElementById('nextBtn').style.display = 'inline-block';
+    }
+
+    // 6. 遊戲結束
+    function endGame() {
+      document.getElementById('gameContainer').style.display = 'none';
+      document.getElementById('resultContainer').style.display = 'block';
+      document.getElementById('finalScore').innerText = score;
+    }
+
+    // 綁定下一題按鈕
+    document.getElementById('nextBtn').addEventListener('click', () => {
+      currentQuestionIndex++;
+      renderQuestion();
+    });
     
-    // 啟動
+    // 啟動遊戲
     loadData();
   </script>
 </body>
