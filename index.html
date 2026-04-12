@@ -3,17 +3,199 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>單字測驗系統</title>
+  <title>💥 漫畫單字大挑戰 - 首頁 💥</title>
   <style>
-    body { font-family: sans-serif; display: flex; flex-direction: column; align-items: center; margin-top: 50px; }
-    .btn { display: block; width: 200px; padding: 15px; margin: 10px; text-align: center; background-color: #4CAF50; color: white; text-decoration: none; border-radius: 5px; font-size: 18px; }
-    .btn:hover { background-color: #45a049; }
+    /* 全域漫畫風格設定 */
+    :root {
+      --primary-yellow: #FFEB3B;
+      --comic-blue: #2196F3;
+      --comic-red: #F44336;
+      --comic-green: #4CAF50;
+      --border-color: #000;
+      --text-color: #000;
+    }
+
+    body { 
+      font-family: 'Bangers', 'Comic Sans MS', cursive, sans-serif;
+      background-color: #f0f0f0; 
+      background-image: radial-gradient(#ddd 1px, transparent 1px);
+      background-size: 20px 20px;
+      color: var(--text-color);
+      padding: 20px;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+      justify-content: center;
+    }
+
+    /* 粗邊框與剛硬陰影的通用樣式 */
+    .comic-box {
+      border: 4px solid var(--border-color);
+      box-shadow: 8px 8px 0px var(--border-color);
+      background-color: white;
+      border-radius: 4px;
+    }
+
+    .main-title {
+      font-size: 4.5em;
+      text-transform: uppercase;
+      color: var(--primary-yellow);
+      -webkit-text-stroke: 3px var(--border-color);
+      text-shadow: 6px 6px 0px var(--border-color);
+      margin-bottom: 40px;
+      transform: rotate(-3deg);
+      text-align: center;
+      line-height: 1.1;
+    }
+
+    .main-title span {
+      display: block;
+      font-size: 0.5em;
+      color: var(--comic-red);
+      -webkit-text-stroke: 2px var(--border-color);
+      text-shadow: 4px 4px 0px var(--border-color);
+      transform: rotate(2deg);
+      margin-top: 10px;
+    }
+
+    /* === 選單容器 === */
+    .menu-container {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      width: 100%;
+      max-width: 450px;
+    }
+
+    /* === 選單按鈕共通樣式 === */
+    .menu-btn {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      text-decoration: none;
+      color: white;
+      border: 4px solid var(--border-color);
+      box-shadow: 6px 6px 0px var(--border-color);
+      border-radius: 10px;
+      transition: 0.1s ease-in-out;
+      cursor: pointer;
+    }
+
+    .menu-btn:hover {
+      transform: translate(2px, 2px);
+      box-shadow: 4px 4px 0px var(--border-color);
+    }
+    
+    .menu-btn:active {
+      transform: translate(6px, 6px);
+      box-shadow: 0px 0px 0px var(--border-color);
+    }
+
+    .btn-title {
+      font-size: 2.2em;
+      font-weight: 900;
+      margin-bottom: 5px;
+      letter-spacing: 2px;
+      text-shadow: 2px 2px 0px #000;
+    }
+
+    .btn-desc {
+      font-size: 1.1em;
+      font-weight: bold;
+      background: white;
+      color: black;
+      padding: 4px 12px;
+      border: 2px solid #000;
+      border-radius: 20px;
+    }
+
+    /* 個別按鈕顏色配置 */
+    .btn-create {
+      background-color: var(--comic-green);
+      transform: rotate(-1deg);
+    }
+    .btn-create:hover { background-color: #43a047; }
+
+    .btn-game {
+      background-color: var(--comic-red);
+      transform: rotate(1deg);
+    }
+    .btn-game:hover { background-color: #e53935; }
+
+    .btn-quiz {
+      background-color: var(--comic-blue);
+      transform: rotate(-1deg);
+    }
+    .btn-quiz:hover { background-color: #1e88e5; }
+
+    /* 裝飾性元素 */
+    .pow-badge {
+      position: fixed;
+      top: 50px;
+      right: 50px;
+      background: var(--comic-red);
+      color: white;
+      font-size: 2em;
+      font-weight: bold;
+      padding: 20px;
+      border-radius: 50%;
+      border: 4px solid #000;
+      box-shadow: 5px 5px 0px #000;
+      transform: rotate(15deg);
+      z-index: -1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    /* 製作爆炸星星形狀的視覺效果 */
+    .pow-badge::before {
+      content: '';
+      position: absolute;
+      top: -10px; right: -10px; bottom: -10px; left: -10px;
+      background: var(--primary-yellow);
+      z-index: -1;
+      transform: rotate(45deg);
+      border: 4px solid #000;
+    }
+
+    /* 手機版適應 */
+    @media (max-width: 600px) {
+      .main-title { font-size: 3.5em; }
+      .pow-badge { display: none; }
+    }
   </style>
 </head>
 <body>
-  <h1>📝 單字測驗系統</h1>
-  <a href="create.html" class="btn">➕ 建立題庫</a>
-  <a href="game.html" class="btn">🎮 遊戲模式</a>
-  <a href="quiz.html" class="btn">🧠 測驗模式</a>
+
+  <div class="pow-badge">POW!</div>
+
+  <h1 class="main-title">
+    Vocab Master
+    <span>單字測驗系統</span>
+  </h1>
+
+  <div class="menu-container">
+    
+    <a href="create.html" class="menu-btn btn-create">
+      <div class="btn-title">➕ CREATE</div>
+      <div class="btn-desc">批次建立專屬題庫 (20題)</div>
+    </a>
+
+    <a href="game.html" class="menu-btn btn-game">
+      <div class="btn-title">🎮 GAME MODE</div>
+      <div class="btn-desc">30秒競速挑戰，即時回饋</div>
+    </a>
+
+    <a href="quiz.html" class="menu-btn btn-quiz">
+      <div class="btn-title">📝 EXAM MODE</div>
+      <div class="btn-desc">100分制正式測驗，考後訂正</div>
+    </a>
+
+  </div>
+
 </body>
 </html>
