@@ -2,115 +2,206 @@
 <html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
-  <title>建立題庫 - 強制20筆與批次上傳</title>
+  <title>💥 題庫管理中心 💥</title>
   <style>
-    body { font-family: sans-serif; max-width: 700px; margin: 30px auto; padding: 0 20px; line-height: 1.6; }
-    .header-section { background: #f4f4f4; padding: 20px; border-radius: 8px; margin-bottom: 20px; }
-    .row { display: flex; gap: 10px; margin-bottom: 8px; align-items: center; }
-    .row-num { width: 30px; color: #888; font-size: 0.9em; }
-    input { flex: 1; padding: 10px; border: 1px solid #ddd; border-radius: 4px; }
-    button { padding: 10px 20px; cursor: pointer; border-radius: 4px; border: none; font-weight: bold; }
-    
-    #saveBtn { background-color: #4CAF50; color: white; width: 100%; font-size: 1.1em; margin-top: 20px; }
-    #batchToggleBtn { background-color: #2196F3; color: white; }
-    #addRowBtn { background-color: #888; color: white; }
-
-    /* 批次上傳區域樣式 */
-    #batchSection { 
-      display: none; 
-      background: #e3f2fd; 
-      padding: 20px; 
-      border-radius: 8px; 
-      margin-bottom: 20px; 
-      border: 1px dashed #2196F3;
+    :root {
+      --primary-yellow: #FFEB3B;
+      --comic-blue: #2196F3;
+      --comic-red: #F44336;
+      --comic-green: #4CAF50;
+      --border-color: #000;
     }
-    textarea { width: 100%; height: 150px; margin: 10px 0; padding: 10px; box-sizing: border-box; }
-    .hint { font-size: 0.85em; color: #555; }
+
+    body { 
+      font-family: 'Bangers', 'Comic Sans MS', cursive, sans-serif;
+      background-color: #f0f0f0;
+      background-image: radial-gradient(#ddd 1px, transparent 1px);
+      background-size: 20px 20px;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .comic-box {
+      border: 4px solid var(--border-color);
+      box-shadow: 7px 7px 0px var(--border-color);
+      background-color: white;
+      border-radius: 4px;
+      padding: 20px;
+      width: 100%;
+      max-width: 800px;
+      margin-bottom: 30px;
+    }
+
+    h2 { text-transform: uppercase; -webkit-text-stroke: 1px #000; color: var(--comic-red); }
+
+    /* === 題庫管理列表樣式 === */
+    .bank-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 15px;
+      border-bottom: 3px solid #eee;
+      margin-bottom: 10px;
+    }
+    .bank-info { font-size: 1.2em; font-weight: bold; }
+    .action-btns button {
+      margin-left: 10px;
+      padding: 8px 15px;
+      cursor: pointer;
+      font-weight: bold;
+      border: 2px solid #000;
+      box-shadow: 3px 3px 0px #000;
+    }
+    .edit-btn { background: var(--primary-yellow); }
+    .del-btn { background: var(--comic-red); color: white; }
+
+    /* === 表單樣式 === */
+    #editorSection { display: none; } /* 預設隱藏，按編輯或新增才出現 */
+    
+    .row { display: flex; gap: 10px; margin-bottom: 8px; }
+    .row-num { width: 30px; color: #888; font-weight: bold; }
+    input { flex: 1; padding: 10px; border: 2px solid #000; border-radius: 4px; }
+    
+    .main-btns { display: flex; gap: 15px; margin-top: 20px; }
+    .btn {
+      flex: 1; padding: 15px; font-size: 1.2em; font-weight: bold; cursor: pointer;
+      border: 4px solid #000; box-shadow: 5px 5px 0px #000;
+    }
+    .save-btn { background: var(--comic-green); color: white; }
+    .cancel-btn { background: #bbb; }
+    .create-new-btn { background: var(--comic-blue); color: white; width: 100%; margin-bottom: 20px; }
+
+    #batchSection { 
+      background: #e3f2fd; padding: 15px; border: 3px dashed var(--comic-blue); margin-bottom: 20px;
+    }
+    textarea { width: 100%; height: 100px; margin: 10px 0; padding: 10px; box-sizing: border-box; }
   </style>
 </head>
 <body>
 
-  <div class="header-section">
-    <h2>➕ 建立新題庫</h2>
-    <p class="hint">注意：為了維持遊戲品質，每個題庫必須包含 <strong>至少 20 組</strong> 單字。</p>
-    <input type="text" id="bankTitle" placeholder="請輸入題庫名稱 (例如: 多益重點單字)" style="font-size: 1.1em;">
-    <div style="margin-top: 15px; display: flex; gap: 10px;">
-      <button id="batchToggleBtn">📦 批次貼上單字</button>
-      <button id="addRowBtn">➕ 新增更多列</button>
+  <h1 style="font-size: 3em; -webkit-text-stroke: 2px #000; color: var(--primary-yellow); text-shadow: 4px 4px 0px #000;">BANK MANAGER</h1>
+
+  <div id="listSection" class="comic-box">
+    <h2>現有題庫列表</h2>
+    <button id="showCreateBtn" class="btn create-new-btn">➕ 建立新題庫</button>
+    <div id="loadingText">載入中...</div>
+    <div id="bankListContainer"></div>
+  </div>
+
+  <div id="editorSection" class="comic-box">
+    <h2 id="editorTitle">建立新題庫</h2>
+    <input type="text" id="bankTitle" placeholder="題庫名稱" style="font-size: 1.2em; margin-bottom: 20px; width: 100%; box-sizing: border-box;">
+
+    <div id="batchSection">
+      <strong>📦 批次匯入</strong>
+      <textarea id="batchInput" placeholder="格式範例：Apple, 蘋果 (每行一筆)"></textarea>
+      <button onclick="importBatch()" style="padding: 5px 15px; cursor: pointer;">匯入至下方列表</button>
+    </div>
+
+    <div id="wordList"></div>
+    <button onclick="addSingleRow()" style="margin-top: 10px; cursor: pointer;">➕ 新增更多列</button>
+
+    <div class="main-btns">
+      <button id="cancelBtn" class="btn cancel-btn">取消離開</button>
+      <button id="saveBtn" class="btn save-btn">💾 儲存題庫</button>
     </div>
   </div>
 
-  <div id="batchSection">
-    <h4>批次貼上資料</h4>
-    <p class="hint">格式說明：每行一組單字，英文與中文之間用「逗號」或「空白」隔開。<br>範例：<br>Apple, 蘋果<br>Banana, 香蕉</p>
-    <textarea id="batchInput" placeholder="在此貼上多筆資料..."></textarea>
-    <button id="importBtn" style="background-color: #2196F3; color: white;">確認匯入</button>
-    <button id="closeBatchBtn" style="background-color: #bbb;">取消</button>
-  </div>
-
-  <div id="wordList">
-    </div>
-
-  <button id="saveBtn">💾 儲存題庫 (需滿 20 筆)</button>
-  <br><br>
-  <center><a href="index.html">回首頁</a></center>
+  <br><a href="index.html" style="font-weight: bold; color: #000;">回首頁</a>
 
   <script type="module">
-    import { collection, addDoc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
+    import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/12.12.0/firebase-firestore.js";
     import { db } from './firebase-config.js';
 
-    const wordListDiv = document.getElementById('wordList');
+    let currentEditingId = null; // 紀錄目前正在編輯哪一筆，null 代表新建立
     const REQUIRED_COUNT = 20;
 
-    // 1. 初始化生成 20 列輸入框
-    function createRows(count) {
-      for (let i = 0; i < count; i++) {
-        addSingleRow();
+    // --- A. 初始化列表 ---
+    async function loadBanks() {
+      const container = document.getElementById('bankListContainer');
+      const loading = document.getElementById('loadingText');
+      container.innerHTML = "";
+      loading.style.display = "block";
+
+      try {
+        const querySnapshot = await getDocs(collection(db, "banks"));
+        loading.style.display = "none";
+        
+        querySnapshot.forEach((docSnap) => {
+          const data = docSnap.data();
+          const item = document.createElement('div');
+          item.className = "bank-item";
+          item.innerHTML = `
+            <div class="bank-info">${data.title} (${data.words.length} 抽)</div>
+            <div class="action-btns">
+              <button class="edit-btn" onclick="openEditor('${docSnap.id}')">編輯</button>
+              <button class="del-btn" onclick="deleteBank('${docSnap.id}', '${data.title}')">刪除</button>
+            </div>
+          `;
+          container.appendChild(item);
+        });
+      } catch (e) {
+        console.error(e);
+        loading.innerText = "載入失敗！";
       }
     }
 
-    function addSingleRow(engVal = '', chiVal = '') {
-      const currentCount = wordListDiv.querySelectorAll('.row').length + 1;
+    // --- B. 編輯與新增切換 ---
+    window.openEditor = async (id = null) => {
+      currentEditingId = id;
+      const editor = document.getElementById('editorSection');
+      const list = document.getElementById('listSection');
+      const wordList = document.getElementById('wordList');
+      const bankTitleInput = document.getElementById('bankTitle');
+      
+      wordList.innerHTML = "";
+      list.style.display = "none";
+      editor.style.display = "block";
+
+      if (id) {
+        // 編輯模式：抓取現有資料
+        document.getElementById('editorTitle').innerText = "修改題庫";
+        const querySnapshot = await getDocs(collection(db, "banks"));
+        const target = querySnapshot.docs.find(d => d.id === id).data();
+        bankTitleInput.value = target.title;
+        target.words.forEach(w => addSingleRow(w.eng, w.chi));
+      } else {
+        // 新增模式
+        document.getElementById('editorTitle').innerText = "建立新題庫";
+        bankTitleInput.value = "";
+        for(let i=0; i<REQUIRED_COUNT; i++) addSingleRow();
+      }
+    };
+
+    window.addSingleRow = (eng = "", chi = "") => {
+      const wordList = document.getElementById('wordList');
+      const index = wordList.querySelectorAll('.row').length + 1;
       const row = document.createElement('div');
       row.className = 'row';
       row.innerHTML = `
-        <div class="row-num">${currentCount}</div>
-        <input type="text" class="eng" placeholder="英文" value="${engVal}">
-        <input type="text" class="chi" placeholder="中文" value="${chiVal}">
+        <div class="row-num">${index}</div>
+        <input type="text" class="eng" placeholder="英文" value="${eng}">
+        <input type="text" class="chi" placeholder="中文" value="${chi}">
       `;
-      wordListDiv.appendChild(row);
-    }
-
-    // 2. 批次解析邏輯
-    document.getElementById('batchToggleBtn').onclick = () => {
-      document.getElementById('batchSection').style.display = 'block';
-    };
-    document.getElementById('closeBatchBtn').onclick = () => {
-      document.getElementById('batchSection').style.display = 'none';
+      wordList.appendChild(row);
     };
 
-    document.getElementById('importBtn').onclick = () => {
-      const rawText = document.getElementById('batchInput').value.trim();
-      if (!rawText) return;
-
-      const lines = rawText.split('\n');
-      // 清空目前的列表（可選，這裡選擇追加）
-      lines.forEach(line => {
-        // 支援用逗號、分號或空格切割
-        const parts = line.split(/[,，\s\t]+/).filter(p => p.trim() !== '');
-        if (parts.length >= 2) {
-          addSingleRow(parts[0], parts[1]);
+    // --- C. 刪除邏輯 ---
+    window.deleteBank = async (id, title) => {
+      if (confirm(`確定要永久刪除【${title}】嗎？此動作無法復原！`)) {
+        try {
+          await deleteDoc(doc(db, "banks", id));
+          alert("已刪除！");
+          loadBanks();
+        } catch (e) {
+          alert("刪除失敗");
         }
-      });
-
-      document.getElementById('batchInput').value = '';
-      document.getElementById('batchSection').style.display = 'none';
-      alert('匯入完成！請確認列表內容。');
+      }
     };
 
-    // 3. 儲存與驗證邏輯
-    document.getElementById('addRowBtn').onclick = () => addSingleRow();
-
+    // --- D. 儲存邏輯 ---
     document.getElementById('saveBtn').onclick = async () => {
       const title = document.getElementById('bankTitle').value.trim();
       const rows = document.querySelectorAll('.row');
@@ -119,37 +210,55 @@
       rows.forEach(row => {
         const eng = row.querySelector('.eng').value.trim();
         const chi = row.querySelector('.chi').value.trim();
-        if (eng && chi) {
-          words.push({ eng, chi });
-        }
+        if (eng && chi) words.push({ eng, chi });
       });
 
-      // 關鍵驗證：標題與筆數
-      if (!title) {
-        alert("請輸入題庫標題！");
-        return;
-      }
-      if (words.length < REQUIRED_COUNT) {
-        alert(`資料不足！目前僅有 ${words.length} 筆，還需要 ${REQUIRED_COUNT - words.length} 筆才能儲存。`);
+      if (!title || words.length < REQUIRED_COUNT) {
+        alert(`請輸入標題並確保至少有 ${REQUIRED_COUNT} 組單字！`);
         return;
       }
 
       try {
-        await addDoc(collection(db, "banks"), { 
-          title: title, 
-          words: words,
-          createdAt: new Date() 
-        });
-        alert("🎉 成功建立 20 筆以上的題庫！");
-        window.location.href = 'index.html';
+        if (currentEditingId) {
+          // 更新模式
+          await updateDoc(doc(db, "banks", currentEditingId), {
+            title: title,
+            words: words
+          });
+          alert("題庫已更新！");
+        } else {
+          // 新增模式
+          await addDoc(collection(db, "banks"), {
+            title: title,
+            words: words,
+            createdAt: new Date()
+          });
+          alert("題庫建立成功！");
+        }
+        location.reload(); // 重新整理回列表
       } catch (e) {
         console.error(e);
-        alert("儲存失敗，請檢查網路或 Firebase 設定。");
+        alert("儲存失敗");
       }
     };
 
-    // 執行初始化
-    createRows(REQUIRED_COUNT);
+    // 批次匯入小工具
+    window.importBatch = () => {
+      const text = document.getElementById('batchInput').value.trim();
+      if(!text) return;
+      const lines = text.split('\n');
+      lines.forEach(line => {
+        const parts = line.split(/[,，\s\t]+/).filter(p => p.trim() !== '');
+        if (parts.length >= 2) addSingleRow(parts[0], parts[1]);
+      });
+      document.getElementById('batchInput').value = "";
+    };
+
+    document.getElementById('showCreateBtn').onclick = () => openEditor();
+    document.getElementById('cancelBtn').onclick = () => location.reload();
+
+    // 啟動
+    loadBanks();
   </script>
 </body>
 </html>
